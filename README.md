@@ -1,6 +1,6 @@
-# Joann-Bot: The Social Engineering Responder
+# joann-bot: The Social Engineering Responder
 
-The **Joann-Bot** is a lightweight, single-file web application designed to help users quickly assess and respond to a suspicious communication (email, text, phone call, etc.). It guides the user through a simple decision tree based on common social engineering tactics (urgency, emotional appeals, red flags) to provide a clear risk assessment and recommended actions, including simulated reporting procedures.
+The **joann-bot** is a lightweight, single-file web application designed to help users quickly assess and respond to a suspicious communication (email, text, phone call, etc.). It guides the user through a simple decision tree based on common social engineering tactics (urgency, emotional appeals, red flags) to provide a clear risk assessment and recommended actions, including simulated reporting procedures.
 
 ---
 
@@ -41,7 +41,7 @@ The application models a common security workflow:
 
 ---
 
-## Contribute and Make Joann-Bot Better!
+## Contribute and Make joann-bot Better!
 
 This project is meant to be a simple, educational tool, and we strongly encourage you to help us expand and improve it!
 
