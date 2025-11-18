@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>joann-bot</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom styles for buttons to add pop */
+        .btn-primary {
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        .btn-start-over {
+            transition: background-color 0.15s;
+        }
+        .loading-ring {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+        .loading-ring:after {
+            content: " ";
+            display: block;
+            width: 16px;
+            height: 16px;
+            margin: 1px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            border-color: #fff transparent #fff transparent;
+            animation: ring 1.2s linear infinite;
+        }
+        @keyframes ring {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#1c7ed6',
+                        'soft-gray': '#e9ecef',
+                        'safe-green': '#20c997',
+                        'danger-red': '#fa5252',
+                        'warn-yellow': '#fcc419',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app-container" class="w-full max-w-xl bg-white rounded-xl shadow-2xl p-6 md:p-10 border border-gray-100">
+
+        <!-- Header/Title -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center space-x-2">
+                <!-- Lucide Icon for Shield Check -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary-blue">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+                <span>joann-bot</span>
+            </h1>
+            <p class="text-gray-500 mt-2">Identify, assess, and report suspicious communications.</p>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <main id="content-area" class="space-y-6">
+            <!-- Question/Result and Buttons are rendered here -->
+        </main>
+
+        <!-- Global Message Box (used for reporting simulation) -->
+        <div id="message-box" class="mt-8 hidden p-4 rounded-lg text-sm transition-all duration-300"></div>
+
+    </div>
+
+    <script>
+        const appContainer = document.getElementById('content-area');
+        const messageBox = document.getElementById('message-box');
+        let currentNodeKey = 'start';
+        
+        // --- Decision Tree Data Structure ---
+        // Defines all nodes, questions, and outcomes.
+        const decisionTree = {
+            start: {
+                question: "Have you received an unexpected communication (email, text, call, physical note) that seems out of the ordinary?",
+                options: [
+                    { label: "Yes, it was unexpected.", next: 'step1_urgency', style: 'bg-warn-yellow hover:bg-yellow-600' },
+                    { label: "No, it was a normal, expected interaction.", next: 'safe_end', style: 'bg-safe-green hover:bg-green-600' }
+                ]
+            },
+            step1_urgency: {
+                question: "Does the message/person demand immediate action (urgency) or appeal strongly to fear, greed, or curiosity?",
+                options: [
+                    { label: "Yes, there is high pressure or emotion.", next: 'step2_request', style: 'bg-danger-red hover:bg-red-600' },
+                    { label: "No, the tone is professional and low-pressure.", next: 'step3_red_flags', style: 'bg-primary-blue hover:bg-blue-700' }
+                ]
+            },
+            step2_request: {
+                question: "Is the communication asking you to provide a password, credit card number, secret code, or to click a suspicious link/download a file?",
+                options: [
+                    { label: "Yes, it requests sensitive information or a risky action.", next: 'result_critical_risk', style: 'bg-danger-red hover:bg-red-600' },
+                    { label: "No, it only contains information or a general inquiry.", next: 'step3_red_flags', style: 'bg-primary-blue hover:bg-blue-700' }
+                ]
+            },
+            step3_red_flags: {
+                question: "Check for red flags: Does the sender's address/number look odd (misspellings, wrong domain), or does the language contain poor grammar/typos?",
+                options: [
+                    { label: "Yes, I see obvious red flags (typos, strange sender).", next: 'result_high_risk', style: 'bg-danger-red hover:bg-red-600' },
+                    { label: "No, the communication looks legitimate and professional.", next: 'result_verify', style: 'bg-safe-green hover:bg-green-600' }
+                ]
+            },
+
+            // --- Conclusion Nodes ---
+
+            result_critical_risk: {
+                title: "🚨 CRITICAL RISK: STOP IMMEDIATELY",
+                message: "This is a **high-confidence social engineering attempt** (likely Phishing, Pretexting, or Vishing). Do **NOT** click links, reply, share information, or download anything.",
+                severity: 'danger-red',
+                actions: [
+                    { label: "Simulate Report Incident", action: 'report', style: 'bg-danger-red text-white' },
+                    { label: "Start Over", action: 'reset', style: 'bg-gray-300 text-gray-800' }
+                ]
+            },
+            result_high_risk: {
+                title: "⚠️ HIGH RISK: PROCEED WITH EXTREME CAUTION",
+                message: "The red flags indicate this is very likely a scam. The attacker is trying to build trust or bypass filters. **Do not engage.** Verify the sender's identity through an independent, trusted channel (e.g., call the official company phone number, do not use the contact info in the message).",
+                severity: 'warn-yellow',
+                actions: [
+                    { label: "Simulate Report Incident", action: 'report', style: 'bg-warn-yellow text-gray-900' },
+                    { label: "Start Over", action: 'reset', style: 'bg-gray-300 text-gray-800' }
+                ]
+            },
+            result_verify: {
+                title: "✅ MODERATE RISK: INDEPENDENT VERIFICATION NEEDED",
+                message: "While there are no obvious scam signs, the communication remains unexpected. **The safest step is to verify its legitimacy.** Contact the supposed sender (company or person) using a contact method you *know* is correct (e.g., the number on their official website), not any contact info provided in this message.",
+                severity: 'primary-blue',
+                actions: [
+                    { label: "Start Over", action: 'reset', style: 'bg-primary-blue text-white' }
+                ]
+            },
+            safe_end: {
+                title: "🛡️ LIKELY SAFE",
+                message: "Since the interaction was expected and seems normal, it is likely safe. However, always remain **skeptical** of any request for personal information or urgent action, even in expected communications.",
+                severity: 'safe-green',
+                actions: [
+                    { label: "Start Over", action: 'reset', style: 'bg-safe-green text-white' }
+                ]
+            }
+        };
+
+        // --- Core Functions ---
+
+        /**
+         * Renders the current node (question or result) to the UI.
+         */
+        function renderNode() {
+            const node = decisionTree[currentNodeKey];
+            let htmlContent = '';
+            messageBox.classList.add('hidden'); // Hide status messages on new node load
+
+            if (!node) {
+                appContainer.innerHTML = `<div class="text-center text-danger-red font-semibold">Error: Invalid decision node.</div>`;
+                return;
+            }
+
+            // Check if it's a question node
+            if (node.options) {
+                htmlContent = `
+                    <div class="p-6 bg-soft-gray rounded-lg border-l-4 border-primary-blue shadow-inner">
+                        <p class="text-xl font-semibold text-gray-800">${node.question}</p>
+                    </div>
+                    <div class="space-y-4 pt-4">
+                        ${node.options.map((option, index) => `
+                            <button onclick="handleDecision('${option.next}')"
+                                class="btn-primary w-full px-6 py-3 text-lg font-medium text-white rounded-xl ${option.style}">
+                                ${option.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            } 
+            // It's a conclusion/result node
+            else {
+                htmlContent = `
+                    <div class="text-center p-8 rounded-xl bg-white border-4 border-${node.severity} shadow-lg">
+                        <h2 class="text-2xl font-extrabold mb-3 text-${node.severity}">${node.title}</h2>
+                        <p class="text-gray-700 leading-relaxed mb-6">${node.message}</p>
+                        <div class="border-t pt-4 border-gray-100 flex flex-col space-y-3">
+                            <h3 class="text-lg font-semibold text-gray-800">Your Actions:</h3>
+                            ${renderActionButtons(node.actions)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            appContainer.innerHTML = htmlContent;
+        }
+
+        /**
+         * Renders action buttons for the conclusion node.
+         * @param {Array<Object>} actions - Array of action objects.
+         */
+        function renderActionButtons(actions) {
+            return actions.map(action => {
+                const actionHandler = action.action === 'reset' ? 'resetDecisionTree()' : 'simulateReport()';
+                return `
+                    <button id="${action.action}-btn" onclick="${actionHandler}" 
+                        class="w-full md:w-auto px-8 py-3 font-semibold text-white rounded-xl btn-primary ${action.style}">
+                        ${action.label}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Handles the user's click on a decision button.
+         * @param {string} nextNodeKey - The key of the next node.
+         */
+        function handleDecision(nextNodeKey) {
+            currentNodeKey = nextNodeKey;
+            renderNode();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /**
+         * Resets the application to the start node.
+         */
+        function resetDecisionTree() {
+            currentNodeKey = 'start';
+            renderNode();
+            hideMessage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /**
+         * Simulates the incident reporting process.
+         */
+        function simulateReport() {
+            const reportBtn = document.getElementById('report-btn');
+            if (!reportBtn) return;
+
+            // 1. Show loading state
+            reportBtn.disabled = true;
+            reportBtn.innerHTML = `<span class="loading-ring"></span> Submitting...`;
+
+            // 2. Simulate API call / processing time
+            setTimeout(() => {
+                // 3. Update UI to success message
+                showMessage('Report successfully submitted to the Security Team. Thank you for staying vigilant!', 'safe-green');
+                
+                // 4. Reset button text
+                reportBtn.innerHTML = 'Report Confirmed';
+                reportBtn.classList.remove('bg-danger-red', 'bg-warn-yellow');
+                reportBtn.classList.add('bg-gray-500');
+
+            }, 1500); // 1.5 second delay
+        }
+        
+        /**
+         * Displays a temporary status message.
+         * @param {string} message - The message content.
+         * @param {string} colorClass - The Tailwind color class for background.
+         */
+        function showMessage(message, colorClass) {
+            messageBox.classList.remove('hidden');
+            messageBox.className = `mt-8 p-4 rounded-xl text-center shadow-md bg-${colorClass}/10 border border-${colorClass}`;
+            messageBox.innerHTML = `<p class="font-medium text-${colorClass}">${message}</p>`;
+        }
+
+        /**
+         * Hides the status message box.
+         */
+        function hideMessage() {
+            messageBox.classList.add('hidden');
+            messageBox.innerHTML = '';
+        }
+
+        // Initialize the app when the script loads
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNode();
+        });
+    </script>
+</body>
+</html>
